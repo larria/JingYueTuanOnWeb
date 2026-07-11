@@ -71,7 +71,8 @@ const AudioAnalyzer = (() => {
     const mult = 1.4;
     const minGap = 8; // 80ms 最小间隔
 
-    const rawOnsets = []; // time in seconds
+    const rawOnsets = [];          // time in seconds
+    const rawOnsetsWithFlux = [];  // { time, flux } — 只含真实检测的 onset，不含 BPM 填充
     let lastI = -minGap;
 
     for (let i = W + 1; i < envLen - W; i++) {
@@ -85,6 +86,7 @@ const AudioAnalyzer = (() => {
         (i - lastI) >= minGap
       ) {
         rawOnsets.push(i / envSr);
+        rawOnsetsWithFlux.push({ time: i / envSr, flux: flux[i] });
         lastI = i;
       }
     }
@@ -129,7 +131,7 @@ const AudioAnalyzer = (() => {
 
     onProgress(1.0, '完成!');
 
-    return { beats: finalBeats, duration, sampleRate: sr, tracks: TRACKS };
+    return { beats: finalBeats, duration, sampleRate: sr, tracks: TRACKS, rawOnsetsWithFlux };
   }
 
   /**

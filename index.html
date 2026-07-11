@@ -144,6 +144,46 @@ body {
 
 .progress-text { color: #aa88cc; font-size: 13px; }
 
+/* difficulty picker */
+#difficulty-picker {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+#difficulty-picker .label {
+  color: #aa88cc;
+  font-size: 13px;
+  letter-spacing: 2px;
+}
+
+#difficulty-hint {
+  color: #664488;
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
+.diff-btn {
+  padding: 10px 28px;
+  font-size: 14px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  border-radius: 30px;
+  cursor: pointer;
+  transition: all 0.25s;
+  border: 2px solid;
+  background: transparent;
+}
+.diff-btn.easy   { border-color: #00ff88; color: #00ff88; }
+.diff-btn.normal { border-color: #00c8ff; color: #00c8ff; }
+.diff-btn.hard   { border-color: #ff3264; color: #ff3264; }
+.diff-btn.selected { color: #000 !important; }
+.diff-btn.easy.selected   { background: #00ff88; }
+.diff-btn.normal.selected { background: #00c8ff; }
+.diff-btn.hard.selected   { background: #ff3264; }
+
 /* key guide */
 .key-guide {
   display: flex;
@@ -315,6 +355,12 @@ body {
   <div class="analyze-progress" id="analyze-progress">
     <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
     <div class="progress-text" id="progress-text">分析音乐中...</div>
+  </div>
+
+  <div id="difficulty-picker">
+    <div class="label">SELECT DIFFICULTY</div>
+    <div id="difficulty-btns" style="display:flex;gap:10px;"></div>
+    <div id="difficulty-hint"></div>
   </div>
 
   <button class="start-btn" id="start-btn">PLAY</button>
