@@ -2,58 +2,80 @@
 
 浏览器端节奏游戏，风格参照劲乐团（O2Jam）。拖入任意 MP3 文件，游戏自动分析音频、生成谱面，音符从屏幕顶部落下，在判定线处按对应按键得分。
 
+**在线游玩：** https://larria.github.io/JingYueTuanOnWeb/
+
+支持「添加到主屏幕」安装为 PWA，离线也可游玩（需先在线加载一次）。
+
+---
+
 ## 快速开始
 
 ```bash
 npm install
-npm run dev
+npm run dev        # http://localhost:5173
 ```
 
-浏览器访问 `http://localhost:5173`，拖入 MP3 文件即可开始游戏。
-
-## 构建
+## 构建与部署
 
 ```bash
-npm run build    # 输出到 dist/
-npm run preview  # 预览构建产物
+npm run build      # 输出到 dist/
+npm run preview    # 本地预览
+npm run deploy     # 构建并推送到 GitHub Pages (gh-pages 分支)
 ```
+
+首次部署后，在 GitHub 仓库 **Settings → Pages → Branch** 选 `gh-pages / (root)` 并保存，约 1 分钟后线上地址生效。
+
+---
 
 ## 游戏玩法
 
 | 按键 | 轨道 |
 |------|------|
-| A | 左 1 |
-| S | 左 2 |
-| D | 左 3 |
-| 空格 | 中央 |
-| J | 右 1 |
-| K | 右 2 |
-| L | 右 3 |
+| A | 左 1（红）|
+| S | 左 2（橙）|
+| D | 左 3（黄）|
+| 空格 | 中央（绿）|
+| J | 右 1（青）|
+| K | 右 2（紫）|
+| L | 右 3（粉）|
 
-- **Perfect**（±75ms）/ **Good**（±150ms）命中得分，combo 越高分越多
-- **MISS**（>280ms 未命中）combo 归零
-- 达到 combo 30 / 70 / 150 触发 FEVER 里程碑奖励
+- **Perfect**（±75ms）/ **Good**（±150ms）命中得分，combo 越高单次分越多
+- **MISS**（>280ms 未命中）combo 清零
+- combo 达到 30 / 70 / 150 触发 FEVER 里程碑奖励（+3000 / +8000 / +20000 分）
 - 支持 EASY / NORMAL / HARD 三档难度（根据音乐复杂度自动解锁）
 
 ## 支持格式
 
 MP3、OGG、WAV（浏览器 Web Audio API 支持的格式均可）
 
+---
+
 ## 技术栈
 
-- **Vite 5** — 构建工具
-- **Web Audio API** — 音频解码与分析
-- **Canvas 2D API** — 渲染引擎
-- 无 UI 框架，无运行时依赖
+| 技术 | 用途 |
+|------|------|
+| Vite 5 | 开发服务器 & 生产构建 |
+| vite-plugin-pwa | Service Worker + Web App Manifest |
+| workbox | SW 预缓存策略（离线支持）|
+| gh-pages | 一键部署到 GitHub Pages |
+| Web Audio API | 音频解码 & 节拍分析 |
+| Canvas 2D API | 游戏渲染引擎 |
+
+无 UI 框架，无运行时依赖。
 
 ## 项目结构
 
 ```
 src/
-  main.js       # 入口
-  analyzer.js   # 音频分析（onset 检测、BPM 估算、轨道分配）
-  game.js       # 游戏引擎（渲染、输入、计分）
-index.html      # HTML 结构 + 样式
+  main.js         # Vite 入口
+  analyzer.js     # 音频分析（onset 检测、BPM 估算、轨道分配）
+  game.js         # 游戏引擎（渲染、输入、计分）
+public/
+  icon-192.png    # PWA 图标
+  icon-512.png
+  apple-touch-icon.png
+index.html        # HTML 结构 + 样式
+vite.config.js    # Vite + PWA 配置
 ```
 
 详细技术文档见 [DEV.md](./DEV.md)。

@@ -55,6 +55,10 @@ jyt2026/
 │   └── music/
 │       ├── The Sims 4 Theme.mp3   # 测试用 MP3
 │       └── Stage00001.mid         # 测试用 MIDI（当前不支持）
+├── public/
+│   ├── icon-192.png         # PWA 图标
+│   ├── icon-512.png         # PWA 图标（大）
+│   └── apple-touch-icon.png # iOS 主屏图标
 ├── js/                 # 旧版文件（已废弃，保留作参考）
 │   ├── analyzer.js
 │   └── game.js
@@ -87,6 +91,17 @@ npm run preview  # 本地预览构建产物
 ```
 
 `dist/` 目录可直接部署到任意静态托管服务（Nginx、GitHub Pages、Vercel 等）。
+
+### 部署到 GitHub Pages
+
+```bash
+npm run deploy
+```
+
+脚本执行 `vite build`，然后用 `gh-pages` 将 `dist/` 推送到 `gh-pages` 分支。  
+仓库 Settings → Pages → Branch 选 `gh-pages / (root)` 后保存，约 1 分钟生效。
+
+线上地址：`https://larria.github.io/JingYueTuanOnWeb/`
 
 ### 旧版方式（不推荐）
 
@@ -591,7 +606,64 @@ note.time
 
 ---
 
-## 11. 已知问题与改进方向
+## 11. PWA 架构
+
+### 技术选型
+
+| 包 | 用途 |
+|----|------|
+| `vite-plugin-pwa` | 自动生成 Service Worker + Web App Manifest |
+| `workbox-window` | SW 注册与生命周期管理（autoUpdate 模式） |
+| `gh-pages` | 将 `dist/` 推送到 `gh-pages` 分支 |
+
+### Service Worker 策略
+
+`vite-plugin-pwa` 使用 Workbox `generateSW` 模式：
+
+- **预缓存**：所有 JS / CSS / HTML / PNG 在安装时预缓存（约 82 KiB），离线可玩
+- **运行时缓存**：MP3/OGG/WAV 使用 `NetworkOnly`——用户上传的音频不缓存，避免 Cache Storage 无限膨胀
+- **更新策略**：`registerType: 'autoUpdate'`，新版本 SW 激活后自动接管，无需用户手动刷新
+
+### Manifest 配置
+
+```json
+{
+  "name": "劲乐团 2026",
+  "short_name": "劲乐团",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "theme_color": "#0a0010",
+  "background_color": "#0a0010"
+}
+```
+
+`display: fullscreen` 确保安装到主屏后隐藏浏览器 UI，接近原生游戏体验。
+
+### 图标
+
+`public/` 目录下放置三个图标，由 Python/Pillow 程序化生成（深紫背景 + 渐变圆 + "劲"字）：
+
+| 文件 | 尺寸 | 用途 |
+|------|------|------|
+| `icon-192.png` | 192×192 | Android 主屏 |
+| `icon-512.png` | 512×512 | 高分辨率 / maskable |
+| `apple-touch-icon.png` | 180×180 | iOS 主屏 |
+
+如需更换图标，替换以上三个文件后重新 `npm run build`。
+
+### 部署流程
+
+```
+npm run deploy
+  └─ vite build        → dist/（含 sw.js、manifest.webmanifest）
+  └─ gh-pages -d dist  → 推送到 github:gh-pages 分支
+```
+
+GitHub Actions（可选）：可在 `.github/workflows/deploy.yml` 中加入 `push` 触发，实现自动 CI/CD。
+
+---
+
+## 12. 已知问题与改进方向
 
 ### 已知限制
 
