@@ -25,6 +25,20 @@ npm run deploy     # 构建并推送到 GitHub Pages (gh-pages 分支)
 
 首次部署后，在 GitHub 仓库 **Settings → Pages → Branch** 选 `gh-pages / (root)` 并保存，约 1 分钟后线上地址生效。
 
+## 代码仓库
+
+项目同步维护两个远端，每次推送需同时更新：
+
+| 平台 | 地址 |
+|------|------|
+| GitHub | https://github.com/larria/JingYueTuanOnWeb.git |
+| Gitee  | https://gitee.com/larria/jingyuetuan-web.git |
+
+```bash
+git push github main   # 推送到 GitHub
+git push origin main   # 推送到 Gitee
+```
+
 ---
 
 ## 游戏玩法
