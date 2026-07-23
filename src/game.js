@@ -29,6 +29,12 @@ const resultStats  = document.getElementById('result-stats');
 const btnRetry     = document.getElementById('btn-retry');
 const btnNew       = document.getElementById('btn-new');
 
+const settingsBtn    = document.getElementById('settings-btn');
+const settingsModal  = document.getElementById('settings-modal');
+const keyBindings    = document.getElementById('key-bindings');
+const settingsReset  = document.getElementById('settings-reset');
+const settingsClose  = document.getElementById('settings-close');
+
 /* ─── 游戏常量（响应式） ─── */
 const TRACK_COUNT    = 7;
 const CANVAS_W       = Math.min(window.innerWidth, 700);
@@ -42,8 +48,37 @@ const PERFECT_WINDOW = 0.075;
 const GOOD_WINDOW    = 0.15;
 const MISS_WINDOW    = 0.28;
 
-const KEY_MAP      = { 'a': 0, 's': 1, 'd': 2, ' ': 3, 'j': 4, 'k': 5, 'l': 6 };
 const TRACK_COLORS = TRACKS.map(t => t.color);
+
+/* ─── 设置系统（自定义按键，localStorage 持久化） ─── */
+const STORAGE_KEY  = 'jyt2026.settings';
+const DEFAULT_KEYS = ['a', 's', 'd', ' ', 'j', 'k', 'l'];
+
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const s = JSON.parse(raw);
+      if (Array.isArray(s.keys) && s.keys.length === 7) return s;
+    }
+  } catch(e) {}
+  return { keys: DEFAULT_KEYS.slice() };
+}
+function saveSettings(s) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch(e) {}
+}
+
+let settings = loadSettings();
+
+// track 索引 → 按键字符
+function keyForTrack(t) { return settings.keys[t]; }
+// 按键字符 → track 索引（输入判定用，未绑定返回 -1）
+function trackForKey(key) { return settings.keys.indexOf(key); }
+// 展示标签（空格显示 SPC）
+function labelForTrack(t) {
+  const k = settings.keys[t];
+  return k === ' ' ? 'SPC' : k.toUpperCase();
+}
 
 /* ─── 连击里程碑 ─── */
 const MILESTONES = [
@@ -366,7 +401,7 @@ function drawTracks() {
     ctx.fillStyle = age < 0.15 ? '#000' : color;
     ctx.font = 'bold 13px Arial';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(TRACKS[t].label, bx, by);
+    ctx.fillText(labelForTrack(t), bx, by);
   }
 }
 
@@ -497,10 +532,9 @@ document.addEventListener('keydown', e => {
   if (e.repeat) return;
 
   const key = e.key === ' ' ? ' ' : e.key.toLowerCase();
-  if (!(key in KEY_MAP)) return;
+  const track = trackForKey(key);
+  if (track < 0) return;
   e.preventDefault();
-
-  const track    = KEY_MAP[key];
   const songTime = audioCtx ? (audioCtx.currentTime - startTime) : 0;
   hitFlashes[track] = performance.now();
 
@@ -632,5 +666,80 @@ function darken(hex, f) {
   return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
 }
 
+/* ─── 设置面板 ─── */
+let rebindingTrack = -1;
+
+function refreshKeyGuide() {
+  document.querySelectorAll('.key-guide [data-track]').forEach(el => {
+    const t = +el.dataset.track;
+    el.textContent = labelForTrack(t);
+  });
+}
+
+function renderKeyBindings() {
+  keyBindings.innerHTML = '';
+  settings.keys.forEach((k, t) => {
+    const row = document.createElement('div');
+    row.className = 'binding-row';
+    row.innerHTML =
+      `<span class="binding-color" style="background:${TRACKS[t].color}"></span>` +
+      `<span class="binding-track">轨道 ${t + 1}</span>` +
+      `<button class="binding-key" data-track="${t}">${labelForTrack(t)}</button>`;
+    keyBindings.appendChild(row);
+  });
+  keyBindings.querySelectorAll('.binding-key').forEach(btn => {
+    btn.addEventListener('click', () => startRebind(+btn.dataset.track));
+  });
+}
+
+function startRebind(track) {
+  rebindingTrack = track;
+  keyBindings.querySelectorAll('.binding-key').forEach(b => b.classList.remove('listening'));
+  const btn = keyBindings.querySelector(`.binding-key[data-track="${track}"]`);
+  if (btn) {
+    btn.classList.add('listening');
+    btn.textContent = '按下按键...';
+  }
+}
+
+// capture 阶段监听，改键时拦截下一次按键
+document.addEventListener('keydown', e => {
+  if (rebindingTrack < 0) return;
+  e.preventDefault();
+  e.stopPropagation();
+
+  let key = e.key === ' ' ? ' ' : e.key.toLowerCase();
+  // 仅接受单字符（字母/数字/符号）或空格，排除修饰键与功能键
+  if (key.length !== 1) return;
+
+  // 冲突处理：若按键已被其他轨道占用，交换两轨按键
+  const existing = settings.keys.indexOf(key);
+  if (existing >= 0 && existing !== rebindingTrack) {
+    settings.keys[existing] = settings.keys[rebindingTrack];
+  }
+  settings.keys[rebindingTrack] = key;
+  saveSettings(settings);
+  rebindingTrack = -1;
+  renderKeyBindings();
+  refreshKeyGuide();
+}, true);
+
+settingsBtn.addEventListener('click', () => {
+  renderKeyBindings();
+  settingsModal.style.display = 'flex';
+});
+settingsClose.addEventListener('click', () => {
+  rebindingTrack = -1;
+  settingsModal.style.display = 'none';
+});
+settingsReset.addEventListener('click', () => {
+  settings.keys = DEFAULT_KEYS.slice();
+  saveSettings(settings);
+  rebindingTrack = -1;
+  renderKeyBindings();
+  refreshKeyGuide();
+});
+
 /* ─── Init ─── */
+refreshKeyGuide();
 showScreen('start');

@@ -58,6 +58,8 @@ git push origin main   # 推送到 Gitee
 - combo 达到 30 / 70 / 150 触发 FEVER 里程碑奖励（+3000 / +8000 / +20000 分）
 - 支持 EASY / NORMAL / HARD 三档难度（根据音乐复杂度自动解锁）
 
+> 可在开始界面点「设置」自定义 7 个轨道按键，配置保存在浏览器本地（localStorage），刷新后仍生效。冲突时自动交换两轨按键。
+
 ## 支持格式
 
 MP3、OGG、WAV（浏览器 Web Audio API 支持的格式均可）

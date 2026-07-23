@@ -250,6 +250,29 @@ GOOD_WINDOW    = 0.15                          // Good 判定 ±150ms
 MISS_WINDOW    = 0.28                          // 超时 MISS 窗口 280ms
 ```
 
+### 设置系统（自定义按键）
+
+按键映射不再硬编码，运行时从 `localStorage` 读取，缺省回退默认值：
+
+```js
+const STORAGE_KEY  = 'jyt2026.settings';
+const DEFAULT_KEYS = ['a','s','d',' ','j','k','l'];   // track 0~6 对应按键
+let settings = loadSettings();   // { keys: string[7] }
+```
+
+| 辅助函数 | 作用 |
+|---------|------|
+| `loadSettings()` / `saveSettings(s)` | 读写 localStorage，带结构校验（长度必须 7）与 try/catch |
+| `keyForTrack(t)` | track 索引 → 按键字符 |
+| `trackForKey(key)` | 按键字符 → track 索引（未绑定返回 -1，输入判定用）|
+| `labelForTrack(t)` | 展示标签（空格显示 `SPC`，其余大写）|
+
+**生效范围：** 轨道圆圈字母标签（`drawTracks`）、开始界面 key-guide 图示（`refreshKeyGuide`）、输入判定（`keydown` → `trackForKey`）三处均派生自 `settings.keys`。
+
+**冲突处理：** 改键时若新按键已被其他轨道占用，自动交换两轨按键，保证 7 个互不相同。
+
+详细交互见第 8.6 节。
+
 ### 游戏状态机
 
 ```
@@ -446,7 +469,8 @@ clearRect
 
 ```
 keydown 事件
-  ├─ 过滤：游戏未 playing / 长按（e.repeat）/ 非目标键 → 忽略
+  ├─ 过滤：游戏未 playing / 长按（e.repeat）→ 忽略
+  ├─ track = trackForKey(key)；track < 0（未绑定键）→ 忽略
   ├─ 记录 hitFlashes[track]（触发按键圆圈亮起动画）
   ├─ 搜索该轨道上 bestDiff 最小的 active note
   ├─ bestDiff > GOOD_WINDOW (0.15s) → 空按，仅闪光，无惩罚
@@ -471,6 +495,47 @@ note.time
 ────┤←──────── 0.28s ────────▶│    │
     │              MISS 截止     │  │
 ```
+
+### 8.6 设置系统
+
+**入口：** 开始界面 PLAY 按钮下方的「设置」按钮，点击弹出 `#settings-modal`。
+
+**DOM 结构（index.html）：**
+```
+#settings-modal > .modal-card
+  ├── .modal-title        "按键设置"
+  ├── #key-bindings       7 行绑定（JS 动态生成）
+  │     └── .binding-row  色块 + "轨道 N" + .binding-key[data-track]
+  └── .modal-actions      恢复默认 / 完成
+```
+
+**改键流程：**
+```
+点击 .binding-key
+  └─ startRebind(track)
+       rebindingTrack = track
+       按钮加 .listening 类，文字变 "按下按键..."
+       ↓
+下一次 keydown（capture 阶段监听器）
+  ├─ rebindingTrack < 0 → 忽略（正常游戏输入）
+  ├─ e.preventDefault() + stopPropagation()  ← 拦截，不触发游戏判定
+  ├─ key.length !== 1 → 忽略（排除 Shift/Ctrl/方向键等功能键）
+  ├─ 冲突检测：existing = settings.keys.indexOf(key)
+  │    existing >= 0 且 !== rebindingTrack → 交换两轨按键
+  ├─ settings.keys[rebindingTrack] = key
+  ├─ saveSettings() → localStorage
+  └─ renderKeyBindings() + refreshKeyGuide()  ← 同步图示与圆圈标签
+```
+
+**capture 阶段监听**：`addEventListener('keydown', fn, true)`，确保改键监听器先于游戏 keydown 执行。虽然设置面板只在 `start` 界面打开（`gameState !== 'playing'`，游戏 keydown 本就 return），capture 是双重保险。
+
+**恢复默认**：`settings.keys = DEFAULT_KEYS.slice()` → `saveSettings` → 重新渲染。
+
+**localStorage 结构：**
+```json
+{ "keys": ["a","s","d"," ","j","k","l"] }
+```
+读取时做结构校验（必须是长度 7 的数组），损坏数据回退默认值。
 
 ---
 
@@ -571,6 +636,13 @@ note.time
 | `mult` | 1.4 | 阈值倍率（局部均值的 1.4 倍） |
 | `minGap` | 8 | 最小 onset 间隔（帧，= 80ms） |
 | `minDensity` | 1.5 | 触发 BPM 填充的密度阈值（notes/s） |
+
+### game.js — 设置
+
+| 常量 | 值 | 含义 |
+|------|-----|------|
+| `STORAGE_KEY` | `'jyt2026.settings'` | localStorage 键名 |
+| `DEFAULT_KEYS` | `['a','s','d',' ','j','k','l']` | 7 轨默认按键（track 0~6）|
 
 ### game.js — 判定
 
