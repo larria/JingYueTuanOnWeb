@@ -412,6 +412,69 @@ body {
   font-size: 13px;
 }
 
+.settings-section-label {
+  color: #aa88cc;
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.settings-section-label + .key-bindings {
+  margin-bottom: 16px;
+}
+
+.speed-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.speed-hint {
+  color: #664488;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.speed-value {
+  color: #ffcc00;
+  font-size: 13px;
+  font-weight: bold;
+  min-width: 72px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.speed-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: #2a1040;
+  outline: none;
+  cursor: pointer;
+}
+
+.speed-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #cc00ff, #ff6600);
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(204, 0, 255, 0.6);
+}
+
+.speed-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, #cc00ff, #ff6600);
+  cursor: pointer;
+}
+
 /* ── HUD overlay ── */
 #hud {
   position: fixed;
@@ -518,8 +581,19 @@ body {
 <!-- SETTINGS MODAL -->
 <div class="modal" id="settings-modal">
   <div class="modal-card">
-    <div class="modal-title">按键设置</div>
+    <div class="modal-title">游戏设置</div>
+
+    <div class="settings-section-label">下落速度</div>
+    <div class="speed-row">
+      <span class="speed-hint">慢</span>
+      <input type="range" id="speed-slider" class="speed-slider">
+      <span class="speed-hint">快</span>
+      <span class="speed-value" id="speed-value">320 px/s</span>
+    </div>
+
+    <div class="settings-section-label">按键绑定</div>
     <div class="key-bindings" id="key-bindings"></div>
+
     <div class="modal-actions">
       <button class="btn-secondary" id="settings-reset">恢复默认</button>
       <button class="btn-secondary" id="settings-close">完成</button>

@@ -250,26 +250,32 @@ GOOD_WINDOW    = 0.15                          // Good 判定 ±150ms
 MISS_WINDOW    = 0.28                          // 超时 MISS 窗口 280ms
 ```
 
-### 设置系统（自定义按键）
+### 设置系统（自定义按键 + 下落速度）
 
-按键映射不再硬编码，运行时从 `localStorage` 读取，缺省回退默认值：
+按键映射和下落速度均从 `localStorage` 读取，缺省回退默认值：
 
 ```js
 const STORAGE_KEY  = 'jyt2026.settings';
 const DEFAULT_KEYS = ['a','s','d',' ','j','k','l'];   // track 0~6 对应按键
-let settings = loadSettings();   // { keys: string[7] }
+const DEFAULT_SPEED = 320;   // px/s
+const MIN_SPEED = 100, MAX_SPEED = 800;
+let settings = loadSettings();   // { keys: string[7], speed: number }
 ```
 
 | 辅助函数 | 作用 |
 |---------|------|
-| `loadSettings()` / `saveSettings(s)` | 读写 localStorage，带结构校验（长度必须 7）与 try/catch |
+| `loadSettings()` / `saveSettings(s)` | 读写 localStorage，带结构校验与 try/catch；兼容旧版存档（自动补 `speed` 字段）|
 | `keyForTrack(t)` | track 索引 → 按键字符 |
 | `trackForKey(key)` | 按键字符 → track 索引（未绑定返回 -1，输入判定用）|
 | `labelForTrack(t)` | 展示标签（空格显示 `SPC`，其余大写）|
+| `noteSpeed()` | 返回 `settings.speed`，代替原硬编码常量 `NOTE_SPEED` |
+| `leadTime()` | 返回 `CANVAS_H / noteSpeed()`，代替原硬编码常量 `LEAD_TIME` |
 
-**生效范围：** 轨道圆圈字母标签（`drawTracks`）、开始界面 key-guide 图示（`refreshKeyGuide`）、输入判定（`keydown` → `trackForKey`）三处均派生自 `settings.keys`。
+**生效范围（按键）：** 轨道圆圈字母标签（`drawTracks`）、开始界面 key-guide 图示（`refreshKeyGuide`）、输入判定（`keydown` → `trackForKey`）三处均派生自 `settings.keys`。
 
-**冲突处理：** 改键时若新按键已被其他轨道占用，自动交换两轨按键，保证 7 个互不相同。
+**生效范围（速度）：** `update()` 中的 `note.y` 计算、`startGame()` 的 `offset`、`drawProgressBar()` 的进度计算，均调用 `noteSpeed()` / `leadTime()`，每局开始时取当前值，游戏中途修改不影响本局。
+
+**冲突处理（按键）：** 改键时若新按键已被其他轨道占用，自动交换两轨按键，保证 7 个互不相同。
 
 详细交互见第 8.6 节。
 
@@ -643,6 +649,9 @@ note.time
 |------|-----|------|
 | `STORAGE_KEY` | `'jyt2026.settings'` | localStorage 键名 |
 | `DEFAULT_KEYS` | `['a','s','d',' ','j','k','l']` | 7 轨默认按键（track 0~6）|
+| `DEFAULT_SPEED` | `320` px/s | 音符下落速度默认值 |
+| `MIN_SPEED` | `100` px/s | 速度下限 |
+| `MAX_SPEED` | `800` px/s | 速度上限 |
 
 ### game.js — 判定
 
@@ -654,10 +663,10 @@ note.time
 
 ### game.js — 渲染
 
-| 常量 | 值 | 含义 |
-|------|-----|------|
-| `NOTE_SPEED` | 320 px/s | 音符下落速度 |
-| `LEAD_TIME` | CANVAS_H/320 | 音符从顶部到判定线的时间（约 2.4s） |
+| 常量/函数 | 值 | 含义 |
+|---------|-----|------|
+| `noteSpeed()` | `settings.speed`（默认 320 px/s）| 音符下落速度，从设置动态读取 |
+| `leadTime()` | `CANVAS_H / noteSpeed()`（约 2.4s @ 320）| 音符从顶部到判定线的时间 |
 | `HIT_Y` | CANVAS_H - 100 | 判定线 Y 坐标（距底 100px） |
 
 ### game.js — 难度阈值

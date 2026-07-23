@@ -32,6 +32,8 @@ const btnNew       = document.getElementById('btn-new');
 const settingsBtn    = document.getElementById('settings-btn');
 const settingsModal  = document.getElementById('settings-modal');
 const keyBindings    = document.getElementById('key-bindings');
+const speedSlider    = document.getElementById('speed-slider');
+const speedValue     = document.getElementById('speed-value');
 const settingsReset  = document.getElementById('settings-reset');
 const settingsClose  = document.getElementById('settings-close');
 
@@ -42,15 +44,21 @@ const CANVAS_H       = window.innerHeight;
 const TRACK_W        = CANVAS_W / TRACK_COUNT;
 const HIT_Y          = CANVAS_H - 100;
 const NOTE_RADIUS    = Math.min(22, TRACK_W * 0.38);
-const NOTE_SPEED     = 320;
-const LEAD_TIME      = CANVAS_H / NOTE_SPEED;
 const PERFECT_WINDOW = 0.075;
 const GOOD_WINDOW    = 0.15;
 const MISS_WINDOW    = 0.28;
 
+const DEFAULT_SPEED  = 320;   // px/s，音符下落速度默认值
+const MIN_SPEED      = 100;
+const MAX_SPEED      = 800;
+
+// NOTE_SPEED 和 LEAD_TIME 从 settings 动态读取
+function noteSpeed()  { return settings.speed ?? DEFAULT_SPEED; }
+function leadTime()   { return CANVAS_H / noteSpeed(); }
+
 const TRACK_COLORS = TRACKS.map(t => t.color);
 
-/* ─── 设置系统（自定义按键，localStorage 持久化） ─── */
+/* ─── 设置系统（自定义按键 + 下落速度，localStorage 持久化） ─── */
 const STORAGE_KEY  = 'jyt2026.settings';
 const DEFAULT_KEYS = ['a', 's', 'd', ' ', 'j', 'k', 'l'];
 
@@ -59,10 +67,14 @@ function loadSettings() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const s = JSON.parse(raw);
-      if (Array.isArray(s.keys) && s.keys.length === 7) return s;
+      if (Array.isArray(s.keys) && s.keys.length === 7) {
+        // 兼容旧版存档（没有 speed 字段）
+        if (typeof s.speed !== 'number') s.speed = DEFAULT_SPEED;
+        return s;
+      }
     }
   } catch(e) {}
-  return { keys: DEFAULT_KEYS.slice() };
+  return { keys: DEFAULT_KEYS.slice(), speed: DEFAULT_SPEED };
 }
 function saveSettings(s) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch(e) {}
@@ -258,7 +270,7 @@ function startGame(diffIdx) {
   particles = []; judgeFX = [];
   hitFlashes.fill(0);
 
-  const offset = LEAD_TIME + 0.5;
+  const offset = leadTime() + 0.5;
   noteObjects = tier.beats.map((b, i) => ({
     id: i, time: b.time + offset, track: b.track,
     state: 'active', y: -NOTE_RADIUS,
@@ -302,7 +314,7 @@ function gameLoop(ts) {
 function update(songTime, dt) {
   for (const note of noteObjects) {
     if (note.state !== 'active') continue;
-    note.y = HIT_Y - (note.time - songTime) * NOTE_SPEED;
+    note.y = HIT_Y - (note.time - songTime) * noteSpeed();
     if (songTime > note.time + MISS_WINDOW) {
       note.state = 'miss';
       combo = 0;
@@ -329,7 +341,7 @@ function update(songTime, dt) {
   }
 
   const allDone  = noteObjects.every(n => n.state !== 'active');
-  const overtime = audioCtx && (audioCtx.currentTime - startTime) > songDuration + LEAD_TIME + 2;
+  const overtime = audioCtx && (audioCtx.currentTime - startTime) > songDuration + leadTime() + 2;
   if (allDone || overtime) endGame();
 }
 
@@ -473,7 +485,7 @@ function drawJudgeFX() {
 }
 
 function drawProgressBar(songTime) {
-  const pct = Math.min(1, Math.max(0, (songTime - (LEAD_TIME + 0.5)) / songDuration));
+  const pct = Math.min(1, Math.max(0, (songTime - (leadTime() + 0.5)) / songDuration));
   const h = 4, y = CANVAS_H - h;
   ctx.fillStyle = 'rgba(255,255,255,0.08)';
   ctx.fillRect(0, y, CANVAS_W, h);
@@ -724,7 +736,23 @@ document.addEventListener('keydown', e => {
   refreshKeyGuide();
 }, true);
 
+function initSpeedSlider() {
+  speedSlider.min   = MIN_SPEED;
+  speedSlider.max   = MAX_SPEED;
+  speedSlider.step  = 10;
+  speedSlider.value = settings.speed;
+  speedValue.textContent = settings.speed + ' px/s';
+}
+
+speedSlider.addEventListener('input', () => {
+  const v = +speedSlider.value;
+  settings.speed = v;
+  saveSettings(settings);
+  speedValue.textContent = v + ' px/s';
+});
+
 settingsBtn.addEventListener('click', () => {
+  initSpeedSlider();
   renderKeyBindings();
   settingsModal.style.display = 'flex';
 });
@@ -733,9 +761,11 @@ settingsClose.addEventListener('click', () => {
   settingsModal.style.display = 'none';
 });
 settingsReset.addEventListener('click', () => {
-  settings.keys = DEFAULT_KEYS.slice();
+  settings.keys  = DEFAULT_KEYS.slice();
+  settings.speed = DEFAULT_SPEED;
   saveSettings(settings);
   rebindingTrack = -1;
+  initSpeedSlider();
   renderKeyBindings();
   refreshKeyGuide();
 });
