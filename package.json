@@ -1,0 +1,18 @@
+{
+  "name": "jyt2026",
+  "version": "1.0.0",
+  "description": "劲乐团风格节奏游戏 — Rhythm Game",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "vite build && gh-pages -d dist -r https://github.com/larria/JingYueTuanOnWeb.git"
+  },
+  "devDependencies": {
+    "gh-pages": "^6.3.0",
+    "vite": "^5.4.0",
+    "vite-plugin-pwa": "^1.3.0",
+    "workbox-window": "^7.4.1"
+  }
+}

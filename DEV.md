@@ -6,6 +6,7 @@
 2. [目录结构](#2-目录结构)
 3. [运行方式](#3-运行方式)
 4. [整体架构](#4-整体架构)
+
 5. [音频分析模块（analyzer.js）](#5-音频分析模块-analyzerjs)
 6. [游戏引擎（game.js）](#6-游戏引擎-gamejs)
 7. [界面与样式（index.html）](#7-界面与样式-indexhtml)
@@ -25,7 +26,7 @@
 
 本项目是一款运行在浏览器中的单页节奏游戏，风格参照劲乐团（O2Jam）。玩家将任意 MP3 文件拖入页面后，游戏自动分析音频、生成谱面，音符从屏幕顶部落下，玩家在判定线处按对应按键得分。
 
-**技术栈：** 纯原生 HTML5 + JavaScript（无框架、无构建工具），使用 Web Audio API 解码音频，Canvas 2D API 渲染。
+**技术栈：** 原生 HTML5 + JavaScript ES Modules（无 UI 框架），使用 Web Audio API 解码音频，Canvas 2D API 渲染，Vite 负责构建打包。
 
 **按键映射：**
 
@@ -45,37 +46,57 @@
 
 ```
 jyt2026/
-├── index.html          # 页面入口，含全部 CSS 与 HTML 结构
-├── js/
-│   ├── analyzer.js     # 音频分析模块（IIFE，暴露 AudioAnalyzer）
-│   └── game.js         # 游戏引擎（IIFE，无外部暴露）
+├── index.html          # 页面入口（HTML 结构 + CSS）
+├── src/
+│   ├── main.js         # Vite 入口（仅 import game.js）
+│   ├── analyzer.js     # 音频分析模块（ES Module export）
+│   └── game.js         # 游戏引擎（ES Module，import analyzer）
 ├── assets/
 │   └── music/
 │       ├── The Sims 4 Theme.mp3   # 测试用 MP3
 │       └── Stage00001.mid         # 测试用 MIDI（当前不支持）
+├── js/                 # 旧版文件（已废弃，保留作参考）
+│   ├── analyzer.js
+│   └── game.js
+├── dist/               # vite build 输出目录（gitignore）
+├── package.json
+├── vite.config.js
 └── DEV.md              # 本文档
 ```
 
-`index.html` 按顺序引入两个脚本：`analyzer.js` 先加载（定义全局 `AudioAnalyzer`），`game.js` 后加载（依赖 `AudioAnalyzer`）。
+`index.html` 通过 `<script type="module" src="/src/main.js">` 引入入口，由 Vite 处理模块依赖与打包。
 
 ---
 
 ## 3. 运行方式
 
-项目不依赖任何构建工具，但 Web Audio API 需要在 HTTP 协议下运行（不能直接双击打开 HTML 文件）。
+### 开发模式（推荐）
 
 ```bash
-# 进入项目目录
-cd /path/to/jyt2026
-
-# 启动本地 HTTP 服务（Python 3）
-python3 -m http.server 8080
-
-# 浏览器访问
-open http://localhost:8080
+npm install      # 首次安装依赖
+npm run dev      # 启动 Vite 开发服务器（默认 http://localhost:5173）
 ```
 
-也可使用 VS Code Live Server、http-server（npm）等任意静态服务器。
+Vite 提供 HMR 热更新，修改 `src/` 下的文件后浏览器自动刷新。
+
+### 生产构建
+
+```bash
+npm run build    # 输出到 dist/
+npm run preview  # 本地预览构建产物
+```
+
+`dist/` 目录可直接部署到任意静态托管服务（Nginx、GitHub Pages、Vercel 等）。
+
+### 旧版方式（不推荐）
+
+如需不依赖 Node.js 直接运行旧版文件（`js/` 目录），仍可使用静态 HTTP 服务：
+
+```bash
+python3 -m http.server 8080
+```
+
+但这套旧版代码不再随主分支更新，建议使用 `src/` 目录下的 ES Module 版本。
 
 ---
 
@@ -114,14 +135,14 @@ open http://localhost:8080
 ### 模块结构
 
 ```js
-const AudioAnalyzer = (() => {
-  const TRACKS = [ ... ];         // 7 条轨道元数据
-  async function analyze(...) {}  // 主入口
-  function assignTracks(...) {}   // onset → 轨道分配
-  function estimateBPM(...) {}    // BPM 自相关估算
-  return { analyze, TRACKS };
-})();
+// src/analyzer.js — ES Module
+export const TRACKS = [ ... ];         // 7 条轨道元数据
+export async function analyze(...) {}  // 主入口
+function assignTracks(...) {}          // onset → 轨道分配（内部）
+function estimateBPM(...) {}           // BPM 自相关估算（内部）
 ```
+
+`game.js` 通过 `import { analyze, TRACKS } from './analyzer.js'` 引入，不再依赖全局变量 `AudioAnalyzer`。
 
 ### `analyze(arrayBuffer, onProgress)` — 主流程
 
